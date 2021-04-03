@@ -1,6 +1,5 @@
 use nalgebra::{Matrix4, Point3, Vector3};
 
-mod branch;
 mod render;
 mod shader;
 mod tree;
