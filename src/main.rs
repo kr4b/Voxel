@@ -1,15 +1,16 @@
-use nalgebra::{Matrix4, Point3, Rotation3, Vector3};
+use nalgebra::{Matrix4, Point3, Vector3};
 
 mod branch;
 mod render;
 mod shader;
+mod tree;
 mod vao;
 mod volume;
 mod window;
 
-use branch::*;
 use render::*;
 use shader::*;
+use tree::*;
 use vao::*;
 use volume::*;
 use window::*;
@@ -23,13 +24,12 @@ struct App {
     pitch: f32,
     yaw: f32,
     speed: f32,
-    root: Branch,
-    sequence: Sequence,
+    tree: Tree,
 }
 
 impl App {
     pub fn new() -> Self {
-        let texture = Volume::from_file("assets/world", 512);
+        let mut texture = Volume::from_file("assets/world", 512);
 
         let size = texture.size();
         let mut height = 0;
@@ -39,6 +39,16 @@ impl App {
                 height = y;
             }
         }
+
+        let start = Point3::new(size as f32 / 2.0, height as f32, size as f32 / 2.0);
+        let offset = Vector3::new(
+            rand::random::<f32>() * 10.0 - 5.0,
+            35.0 + rand::random::<f32>() * 10.0,
+            rand::random::<f32>() * 10.0 - 5.0,
+        );
+        let tree = Tree::new(start + offset, 30.0, 400, start, &mut texture.data, size);
+
+        texture.sub();
 
         Self {
             vao: VertexArray::new(),
@@ -61,55 +71,15 @@ impl App {
             pitch: 0.0,
             yaw: 0.0,
             speed: 5.0,
-            root: Branch::new(
-                Point3::new(size as f32 / 2.0, height as f32, size as f32 / 2.0),
-                15.0,
-                4,
-                Rotation3::identity(),
-            ),
-            sequence: Sequence::Branch(
-                (6, 20.0, 0.5, 4, 0),
-                // Bottom branches
-                Box::new(Sequence::Branch(
-                    (3, 8.0, 8.0, 1, 60),
-                    Box::new(Sequence::Leaf),
-                    Box::new(Sequence::Leaf),
-                )),
-                // Second center
-                Box::new(Sequence::Branch(
-                    (6, 27.5, 12.5, 3, 30),
-                    // Second branches
-                    Box::new(Sequence::Leaf),
-                    // Tertairy center
-                    Box::new(Sequence::Branch(
-                        (6, 15.0, 11.0, 2, 30),
-                        // Tertairy branches
-                        Box::new(Sequence::Branch(
-                            (3, 5.0, 0.0, 1, 0),
-                            Box::new(Sequence::Leaf),
-                            Box::new(Sequence::Leaf),
-                        )),
-                        // Quarternary center
-                        Box::new(Sequence::Branch(
-                            (6, 10.0, 5.0, 1, 30),
-                            Box::new(Sequence::Leaf),
-                            // Top
-                            Box::new(Sequence::Branch(
-                                (4, 2.0, 2.0, 1, 0),
-                                Box::new(Sequence::Leaf),
-                                Box::new(Sequence::Leaf),
-                            )),
-                        )),
-                    )),
-                )),
-            ),
+            tree,
         }
     }
 
     fn grow(&mut self) {
         let size = self.texture.size();
-        self.root
-            .extend(&self.sequence, &mut self.texture.data, size);
+        for _ in 0..10 {
+            self.tree.grow(&mut self.texture.data, size);
+        }
         self.texture.sub();
     }
 }
