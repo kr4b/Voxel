@@ -7,8 +7,7 @@ const LEAF_COLOR: u16 = 0b1_01001_10100_00101;
 const LEAF_SIZE: usize = 5;
 
 struct Branch {
-    from: Point3<f32>,
-    to: Point3<f32>,
+    pos: Point3<f32>,
     dir: Vector3<f32>,
     next_dirs: Vec<Vector3<f32>>,
     leaf: bool,
@@ -17,8 +16,7 @@ struct Branch {
 impl Branch {
     fn new(from: Point3<f32>, dir: Vector3<f32>) -> Self {
         Self {
-            from,
-            to: from + dir,
+            pos: from + dir,
             dir,
             next_dirs: Vec::new(),
             leaf: true,
@@ -29,7 +27,7 @@ impl Branch {
         self.leaf = false;
         let len = self.next_dirs.len() as f32 + 1.0;
         let next_dir = self.next_dirs.drain(..).fold(self.dir, |acc, v| acc + v) / len;
-        Self::new(self.to, next_dir)
+        Self::new(self.pos, next_dir.normalize())
     }
 
     fn next_option(&mut self) -> Option<Self> {
@@ -49,8 +47,7 @@ pub struct Tree {
     leaves: Vec<Point3<f32>>,
     branches: Vec<Branch>,
     width: f32,
-    change_count: usize,
-    prev_len: usize,
+    done: bool,
 }
 
 impl Tree {
@@ -81,7 +78,7 @@ impl Tree {
         while !done {
             let branch = branches.last().unwrap();
             for leaf in &leaves {
-                let dist = distance(&branch.to, leaf);
+                let dist = distance(&branch.pos, leaf);
                 if dist < MAX_DIST {
                     done = true;
                     break;
@@ -93,37 +90,30 @@ impl Tree {
         }
 
         for branch in &branches {
-            Self::create_branch_thickness(branch.from, branch.to, 6, data, size);
+            Self::create_branch_thickness(branch.pos, branch.dir, 6, data, size);
         }
 
         Tree {
             leaves,
             branches,
             width: 5.0,
-            change_count: 0,
-            prev_len: 0,
+            done: false,
         }
     }
 
-    fn create_branch(from: Point3<f32>, to: Point3<f32>, data: &mut Vec<u16>, size: usize) {
-        let delta = (to - from.coords).coords.normalize();
-        let mut pos = from;
-
-        loop {
-            data[from.z.round() as usize * size * size
-                + from.y.round() as usize * size
-                + from.x.round() as usize] = BRANCH_COLOR;
-
-            pos += delta;
-            if pos.x.abs() >= to.x.abs() || pos.y.abs() >= to.y.abs() || pos.z.abs() >= to.z.abs() {
-                break;
-            }
-        }
+    fn create_branch(pos: Point3<f32>, data: &mut Vec<u16>, size: usize) {
+        data[pos.z.round() as usize * size * size
+            + pos.y.round() as usize * size
+            + pos.x.round() as usize] = BRANCH_COLOR;
     }
 
-    fn create_branch_thickness(from: Point3<f32>, to: Point3<f32>, thickness: usize, data: &mut Vec<u16>, size: usize) {
-        let delta = to - from.coords;
-
+    fn create_branch_thickness(
+        pos: Point3<f32>,
+        dir: Vector3<f32>,
+        thickness: usize,
+        data: &mut Vec<u16>,
+        size: usize,
+    ) {
         for i in 0..thickness + 1 - (thickness & 1) {
             for j in 0..thickness + 1 - (thickness & 1) {
                 if (thickness & 1) == 0 {
@@ -139,8 +129,8 @@ impl Tree {
 
                 let start = (thickness as f32 / 2.0).floor();
                 let mut offset = Vector3::zeros();
-                if delta.x.abs() < delta.y.abs() || delta.x.abs() < delta.z.abs() {
-                    if delta.y.abs() < delta.z.abs() {
+                if dir.x.abs() < dir.y.abs() || dir.x.abs() < dir.z.abs() {
+                    if dir.y.abs() < dir.z.abs() {
                         offset += Vector3::x() * (i as f32 - start);
                         offset += Vector3::y() * (j as f32 - start);
                     } else {
@@ -152,14 +142,49 @@ impl Tree {
                     offset += Vector3::z() * (j as f32 - start);
                 }
 
-                Self::create_branch(from + offset, to + offset, data, size);
+                Self::create_branch(pos + offset, data, size);
             }
         }
     }
 
-    fn create_leaves(&mut self, data: &mut Vec<u16>, size: usize) {
+    fn check_weight(data: &mut Vec<u16>, size: usize, x: usize, y: usize, z: usize) -> usize {
+        let mut weight = 0;
+
+        for i in -1..=1 {
+            for j in -1..=1 {
+                for k in -1..=1 {
+                    let x = x as i32 + i;
+                    let y = y as i32 + j;
+                    let z = z as i32 + k;
+                    if x < 0
+                        || y < 0
+                        || z < 0
+                        || x >= size as i32
+                        || y >= size as i32
+                        || z >= size as i32
+                        || (i == 0 && j == 0 && k == 0)
+                    {
+                        continue;
+                    }
+
+                    let current =
+                        3 - i.abs() as usize - j.abs() as usize - k.abs() as usize;
+                    if data[z as usize * size * size + y as usize * size + x as usize] > 0 {
+                        weight += current;
+                    }
+                }
+            }
+        }
+
+        weight
+    }
+
+    pub fn create_leaves(&mut self, data: &mut Vec<u16>, size: usize) {
         for branch in &self.branches {
-            if !branch.leaf {
+            let x = branch.pos.x.round() as usize;
+            let y = branch.pos.y.round() as usize;
+            let z = branch.pos.z.round() as usize;
+            if !branch.leaf || Self::check_weight(data, size, x, y, z) > 3 {
                 continue;
             }
 
@@ -177,9 +202,9 @@ impl Tree {
                             continue;
                         }
 
-                        data[((branch.to.z.round() - 2.0) as usize + z) * size * size
-                            + ((branch.to.y.round() - 2.0) as usize + y) * size
-                            + (branch.to.x.round() - 2.0) as usize
+                        data[((branch.pos.z.round() - 2.0) as usize + z) * size * size
+                            + ((branch.pos.y.round() - 2.0) as usize + y) * size
+                            + (branch.pos.x.round() - 2.0) as usize
                             + x] = LEAF_COLOR;
                     }
                 }
@@ -188,10 +213,19 @@ impl Tree {
     }
 
     pub fn grow(&mut self, data: &mut Vec<u16>, size: usize) {
+        if self.done {
+            return;
+        }
+
+        if self.width < 1.0 {
+            self.create_leaves(data, size);
+            self.done = true;
+        }
+
         let branches = &self.branches;
         self.leaves.retain(|leaf| {
             branches.iter().fold(std::f32::MAX, |acc, branch| {
-                distance(&branch.to, leaf).min(acc)
+                distance(&branch.pos, leaf).min(acc)
             }) > MIN_DIST
         });
 
@@ -200,7 +234,7 @@ impl Tree {
                 .branches
                 .iter_mut()
                 .fold((std::f32::MAX, None), |acc, branch| {
-                    let dist = distance(&branch.to, leaf);
+                    let dist = distance(&branch.pos, leaf);
                     if dist < acc.0 {
                         (dist, Some(branch))
                     } else {
@@ -210,7 +244,7 @@ impl Tree {
                 .1
                 .unwrap();
 
-            let dir = (leaf - branch.to).normalize();
+            let dir = (leaf - branch.pos).normalize();
             branch.add(dir);
         }
 
@@ -221,21 +255,11 @@ impl Tree {
             .collect();
 
         for branch in &new_branches {
-            Self::create_branch_thickness(branch.from, branch.to, self.width as usize, data, size);
+            Self::create_branch_thickness(branch.pos, branch.dir, self.width as usize, data, size);
         }
 
         self.branches.extend(new_branches);
-        if self.branches.len() == self.prev_len {
-            self.change_count += 1;
-        } else {
-            self.prev_len = self.branches.len();
-            self.change_count = 0;
-        }
 
-        if self.change_count >= 5 {
-            self.create_leaves(data, size);
-        }
-
-        self.width -= 0.05;
+        self.width -= 0.08;
     }
 }

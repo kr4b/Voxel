@@ -79,6 +79,7 @@ impl App {
         for _ in 0..10 {
             self.tree.grow(&mut self.texture.data, size);
         }
+
         self.texture.sub();
     }
 }
