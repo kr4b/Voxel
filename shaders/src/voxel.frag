@@ -8,8 +8,10 @@ layout (location = 0) out vec4 color;
 
 #define EPSILON 1e-4
 
-uniform usampler3D volume;
-uniform uint size;
+layout(binding = 1) uniform usampler3D volume;
+layout(binding = 2) uniform Specs {
+  uint size;
+} specs;
 
 bool is_empty(uint n) {
   return (n & (1 << 15)) == 0;
@@ -55,7 +57,7 @@ uint intersect_ray(in vec3 origin, in vec3 dir, in vec3 AABBMin, in vec3 AABBMax
     uint i = 0;
 
     do {
-      voxel = texelFetch(volume, pos - ivec3(AABBMin), 0).x;
+      voxel = texelFetch(volume, pos - ivec3(AABBMin), 0).r;
       itsct = vec3(pos);
       out_normal = normal;
 
@@ -74,7 +76,7 @@ uint intersect_ray(in vec3 origin, in vec3 dir, in vec3 AABBMin, in vec3 AABBMax
       }
 
       i += 1;
-    } while (all(greaterThanEqual(pos, AABBMin - 1)) && all(lessThanEqual(pos, AABBMax + 1)) && is_empty(voxel) && i < size * 3);
+    } while (all(greaterThanEqual(pos, AABBMin - 1)) && all(lessThanEqual(pos, AABBMax + 1)) && is_empty(voxel) && i < specs.size * 3);
 
     return voxel;
   }
@@ -83,8 +85,8 @@ uint intersect_ray(in vec3 origin, in vec3 dir, in vec3 AABBMin, in vec3 AABBMax
 }
 
 void main() {
-  const vec3 AABBMin = vec3(-256.0);
-  const vec3 AABBMax = vec3(255.0);
+  const vec3 AABBMin = vec3(-specs.size / 2);
+  const vec3 AABBMax = vec3(specs.size / 2 - 1);
   const vec3 dir = normalize(raw_dir);
 
   vec3 itsct, normal;
@@ -94,5 +96,7 @@ void main() {
   if (!is_empty(voxel)) {
     uint v = intersect_ray(new_origin, vec3(0.0, 1.0, 0.0), AABBMin, AABBMax, itsct, normal);
     color = vec4(get_color(voxel) * (is_empty(v) ? 1.0 : 0.5), 1.0);
+  } else {
+    color = vec4(0.0);
   }
 }

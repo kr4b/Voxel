@@ -1,13 +1,12 @@
-use gl::types::GLuint;
-use noise::{Fbm, MultiFractal, NoiseFn};
 use std::fs::File;
-use std::io::{BufReader, Read, Write};
+use std::io::{BufReader, Read};
 use std::path::Path;
+
+use noise::{Fbm, NoiseFn};
 
 pub struct Volume {
     size: usize,
     pub data: Vec<u16>,
-    texture: GLuint,
 }
 
 impl Volume {
@@ -33,30 +32,9 @@ impl Volume {
     }
 
     fn create_volume(size: usize, data: Vec<u16>) -> Self {
-        let mut texture = 0;
-        unsafe {
-            gl::CreateTextures(gl::TEXTURE_3D, 1, &mut texture);
-            gl::BindTexture(gl::TEXTURE_3D, texture);
-            gl::TexParameteri(gl::TEXTURE_3D, gl::TEXTURE_MIN_FILTER, gl::NEAREST as _);
-            gl::TexParameteri(gl::TEXTURE_3D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as _);
-            gl::TexImage3D(
-                gl::TEXTURE_3D,
-                0,
-                gl::R16UI as _,
-                size as _,
-                size as _,
-                size as _,
-                0,
-                gl::RED_INTEGER,
-                gl::UNSIGNED_SHORT,
-                data.as_ptr() as *const _,
-            );
-        }
-
         Self {
             size,
             data,
-            texture,
         }
     }
 
@@ -108,37 +86,12 @@ impl Volume {
             }
         }
 
-        let mut file = std::fs::File::create("assets/world").unwrap();
-        let slice =
-            unsafe { std::slice::from_raw_parts(data.as_ptr() as *const u8, data.len() * 2) };
-        file.write_all(slice).unwrap();
+        // let mut file = std::fs::File::create("assets/world").unwrap();
+        // let slice =
+        //     unsafe { std::slice::from_raw_parts(data.as_ptr() as *const u8, data.len() * 2) };
+        // file.write_all(slice).unwrap();
 
         data
-    }
-
-    pub fn sub(&self) {
-        self.bind();
-        unsafe {
-            gl::TexSubImage3D(
-                gl::TEXTURE_3D,
-                0,
-                0,
-                0,
-                0,
-                self.size as _,
-                self.size as _,
-                self.size as _,
-                gl::RED_INTEGER,
-                gl::UNSIGNED_SHORT,
-                self.data.as_ptr() as *const _,
-            );
-        }
-    }
-
-    pub fn bind(&self) {
-        unsafe {
-            gl::BindTexture(gl::TEXTURE_3D, self.texture);
-        }
     }
 
     pub fn size(&self) -> usize {
@@ -148,8 +101,5 @@ impl Volume {
 
 impl Drop for Volume {
     fn drop(&mut self) {
-        unsafe {
-            gl::DeleteTextures(1, &self.texture);
-        }
     }
 }
