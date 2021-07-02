@@ -1,3 +1,5 @@
+mod keyboard;
+
 pub fn create_window(
     window_title: &str,
     window_height: u32,
