@@ -13,7 +13,7 @@ pub struct Instance {
 
 impl Instance {
     pub fn new(entry: &ash::Entry) -> Self {
-        let app_name = CString::new(constants::WINDOW_TITLE).unwrap();
+        let app_name = CString::new("Vulkan").unwrap();
         let engine_name = CString::new("Vulkan Engine").unwrap();
         let app_info = vk::ApplicationInfo {
             s_type: vk::StructureType::APPLICATION_INFO,

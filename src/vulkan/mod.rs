@@ -31,7 +31,6 @@ pub mod texture;
 mod uniform_buffers;
 mod uniform_layout;
 mod util;
-pub mod window;
 
 use command_pool::CommandPool;
 use descriptor_pool::DescriptorPool;

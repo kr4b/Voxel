@@ -11,11 +11,12 @@ mod math;
 mod tree;
 mod volume;
 mod vulkan;
+mod window;
 
 use math::matrices::Matrices;
 use tree::*;
 use volume::*;
-use vulkan::*;
+use vulkan::Vulkan;
 
 struct App {
     vulkan: Vulkan,
@@ -194,9 +195,7 @@ impl App {
 
 fn main() {
     let event_loop = EventLoop::new();
-    let window = window::create_window(&event_loop);
-    window.set_cursor_grab(true).unwrap();
-    window.set_cursor_visible(false);
+    let window = window::create_window("Vulkan", 1280, 720, &event_loop);
     let app = App::new(window);
     app.run(event_loop);
 }
