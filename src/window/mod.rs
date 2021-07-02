@@ -1,4 +1,6 @@
+mod button_resource;
 mod keyboard;
+mod mouse;
 
 pub fn create_window(
     window_title: &str,
