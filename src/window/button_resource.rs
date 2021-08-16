@@ -44,7 +44,7 @@ impl<T> ButtonResource<T> where T: std::cmp::Eq + std::hash::Hash {
     fn check_modifiers(&self, modifiers: Option<ModifiersState>) -> bool {
         match modifiers {
             Some(modifiers) if modifiers == self.modifiers => true,
-            _ => false,
+            _ => self.modifiers.is_empty(),
         }
     }
 }

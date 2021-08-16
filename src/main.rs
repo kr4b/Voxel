@@ -63,7 +63,7 @@ impl App {
 
         vulkan.update_texture(1, &texture.data);
         dispatcher.world_mut().insert(vulkan);
-        dispatcher.world_mut().insert(Matrices { view, inv_proj });
+        dispatcher.world_mut().insert(Matrices { inv_proj, view });
         dispatcher.world_mut().insert(texture);
         dispatcher.world_mut().insert(Keyboard::default());
         dispatcher.world_mut().insert(Mouse::default());
@@ -132,6 +132,8 @@ impl App {
             },
             Event::MainEventsCleared => {
                 self.dispatcher.update();
+                let mut mouse = self.dispatcher.world().write_resource::<Mouse>();
+                mouse.update_delta((0.0, 0.0));
             }
             _ => (),
         });

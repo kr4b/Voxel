@@ -16,7 +16,7 @@ pub struct CameraSystem {
 impl CameraSystem {
     pub fn new() -> Self {
         Self {
-            view: Matrix4::new_translation(&Vector3::new(0.0, 0.0, 30.0)),
+            view: Matrix4::new_translation(&Vector3::new(0.0, 0.0, 0.0)),
             pitch: 0.0,
             yaw: 0.0,
         }

@@ -434,7 +434,7 @@ impl Vulkan {
         self.sync_objects.increment();
     }
 
-    pub fn update_uniform<T>(&self, binding: u32, value: T) {
+    pub fn update_uniform<T>(&mut self, binding: u32, value: T) {
         let data = unsafe {
             self.logical_device.value.map_memory(
                 self.uniforms[&binding].uniforms.memory(self.image_index),
