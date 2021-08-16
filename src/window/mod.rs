@@ -1,11 +1,11 @@
 mod button_resource;
-mod keyboard;
-mod mouse;
+pub mod keyboard;
+pub mod mouse;
 
 pub fn create_window(
     window_title: &str,
-    window_height: u32,
     window_width: u32,
+    window_height: u32,
     event_loop: &winit::event_loop::EventLoop<()>,
 ) -> winit::window::Window {
     let window = winit::window::WindowBuilder::new()

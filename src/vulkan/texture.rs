@@ -419,7 +419,7 @@ impl DynamicTexture {
         }
     }
 
-    pub fn update<T>(&mut self, logical_device: &LogicalDevice, command_pool: &CommandPool, queues: &Queues, data: &Vec<T>) {
+    pub fn update<T>(&self, logical_device: &LogicalDevice, command_pool: &CommandPool, queues: &Queues, data: &Vec<T>) {
         load_data(logical_device, self.buffer_memory, self.width, self.height, self.depth, self.dimensions, data);
 
         let command_buffer = command_pool.begin_single_time_commands(logical_device);
@@ -449,7 +449,7 @@ impl DynamicTexture {
         command_pool.end_single_time_commands(logical_device, command_buffer, queues.graphics);
     }
 
-    pub fn destroy(&mut self, logical_device: &LogicalDevice) {
+    pub fn destroy(&self, logical_device: &LogicalDevice) {
         unsafe {
             logical_device.value.destroy_buffer(self.buffer, None);
             logical_device.value.free_memory(self.buffer_memory, None);

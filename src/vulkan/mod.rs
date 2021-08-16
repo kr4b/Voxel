@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::ptr;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use ash::version::{DeviceV1_0, EntryV1_0, InstanceV1_0};
 use ash::vk;
@@ -55,7 +55,7 @@ use crate::volume::Volume;
 
 pub struct VulkanBuilder {
     _entry: ash::Entry,
-    window: Rc<Window>,
+    window: Window,
     instance: Instance,
     surface: Surface,
     physical_device: PhysicalDevice,
@@ -73,7 +73,7 @@ pub struct VulkanBuilder {
 }
 
 impl VulkanBuilder {
-    fn new(window: Rc<Window>) -> Self {
+    fn new(window: Window) -> Self {
         let entry = unsafe { ash::Entry::new() }.unwrap();
 
         debug_assert!(
@@ -82,7 +82,7 @@ impl VulkanBuilder {
         );
 
         let instance = Instance::new(&entry);
-        let surface = Surface::new(&entry, &instance, window.as_ref());
+        let surface = Surface::new(&entry, &instance, &window);
         let physical_device = PhysicalDevice::new(&instance, &surface);
         let logical_device = LogicalDevice::new(&instance, &physical_device);
         let swap_chain = SwapChain::new(
@@ -90,7 +90,7 @@ impl VulkanBuilder {
             &surface,
             &physical_device,
             &logical_device,
-            window.as_ref(),
+            &window,
         );
         let image_views = ImageViews::new(&logical_device, &swap_chain);
         let queues = Queues::new(&logical_device, &physical_device.indices);
@@ -292,7 +292,7 @@ impl VulkanBuilder {
 
 pub struct Vulkan {
     _entry: ash::Entry,
-    window: Rc<Window>,
+    window: Window,
     instance: Instance,
     surface: Surface,
     physical_device: PhysicalDevice,
@@ -318,7 +318,7 @@ pub struct Vulkan {
 }
 
 impl Vulkan {
-    pub fn builder(window: Rc<Window>) -> VulkanBuilder {
+    pub fn builder(window: Window) -> VulkanBuilder {
         VulkanBuilder::new(window)
     }
 
@@ -434,7 +434,7 @@ impl Vulkan {
         self.sync_objects.increment();
     }
 
-    pub fn update_uniform<T>(&mut self, binding: u32, value: T) {
+    pub fn update_uniform<T>(&self, binding: u32, value: T) {
         let data = unsafe {
             self.logical_device.value.map_memory(
                 self.uniforms[&binding].uniforms.memory(self.image_index),
@@ -455,8 +455,8 @@ impl Vulkan {
         }
     }
 
-    pub fn update_texture<T>(&mut self, binding: u32, data: &Vec<T>) {
-        self.dynamic_textures.get_mut(&binding).unwrap().uniforms.update(
+    pub fn update_texture<T>(&self, binding: u32, data: &Vec<T>) {
+        self.dynamic_textures[&binding].uniforms.update(
             &self.logical_device,
             &self.command_pool,
             &self.queues,
@@ -491,7 +491,7 @@ impl Vulkan {
             &self.surface,
             &self.physical_device,
             &self.logical_device,
-            self.window.as_ref(),
+            &self.window,
         );
         self.image_views = ImageViews::new(&self.logical_device, &self.swap_chain);
         self.queues = Queues::new(&self.logical_device, &self.physical_device.indices);

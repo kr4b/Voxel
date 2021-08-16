@@ -1,5 +1,7 @@
 use nalgebra::{distance, Point3, Vector3};
 
+use specs::{Component, DenseVecStorage};
+
 const MIN_DIST: f32 = 2.5;
 const MAX_DIST: f32 = 15.0;
 const BRANCH_COLOR: u16 = 0b1_01010_00111_00011;
@@ -43,6 +45,7 @@ impl Branch {
     }
 }
 
+#[derive(Component)]
 pub struct Tree {
     leaves: Vec<Point3<f32>>,
     branches: Vec<Branch>,

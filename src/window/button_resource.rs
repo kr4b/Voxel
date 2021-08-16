@@ -1,7 +1,6 @@
 use std::collections::HashSet;
 use winit::event::{ElementState, ModifiersState};
 
-#[derive(Default)]
 pub struct ButtonResource<T> where T: std::cmp::Eq + std::hash::Hash {
     pressed: HashSet<T>,
     held: HashSet<T>,
@@ -10,20 +9,18 @@ pub struct ButtonResource<T> where T: std::cmp::Eq + std::hash::Hash {
 }
 
 impl<T> ButtonResource<T> where T: std::cmp::Eq + std::hash::Hash {
-    pub fn update_keys(&mut self, button: Option<T>, state: ElementState) {
-        if let Some(button) = button {
-            match state {
-                ElementState::Pressed if self.pressed.contains(&button) => {
-                    self.pressed.remove(&button);
-                    self.held.insert(button);
-                },
-                ElementState::Pressed => {
-                    self.pressed.insert(button);
-                },
-                ElementState::Released => {
-                    self.held.remove(&button);
-                    self.released.insert(button);
-                }
+    pub fn update_buttons(&mut self, button: T, state: ElementState) {
+        match state {
+            ElementState::Pressed if self.pressed.contains(&button) => {
+                self.pressed.remove(&button);
+                self.held.insert(button);
+            },
+            ElementState::Pressed => {
+                self.pressed.insert(button);
+            },
+            ElementState::Released => {
+                self.held.remove(&button);
+                self.released.insert(button);
             }
         }
     }
@@ -48,6 +45,17 @@ impl<T> ButtonResource<T> where T: std::cmp::Eq + std::hash::Hash {
         match modifiers {
             Some(modifiers) if modifiers == self.modifiers => true,
             _ => false,
+        }
+    }
+}
+
+impl<T> Default for ButtonResource<T> where T: std::cmp::Eq + std::hash::Hash {
+    fn default() -> Self {
+        Self {
+            pressed: HashSet::new(),
+            held: HashSet::new(),
+            released: HashSet::new(),
+            modifiers: ModifiersState::default(),
         }
     }
 }
