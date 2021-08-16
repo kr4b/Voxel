@@ -19,6 +19,7 @@ impl<T> ButtonResource<T> where T: std::cmp::Eq + std::hash::Hash {
                 self.pressed.insert(button);
             },
             ElementState::Released => {
+                self.pressed.remove(&button);
                 self.held.remove(&button);
                 self.released.insert(button);
             }

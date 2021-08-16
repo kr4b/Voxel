@@ -85,8 +85,8 @@ uint intersect_ray(in vec3 origin, in vec3 dir, in vec3 AABBMin, in vec3 AABBMax
 }
 
 void main() {
-  const vec3 AABBMin = vec3(-specs.size / 2);
-  const vec3 AABBMax = vec3(specs.size / 2 - 1);
+  const vec3 AABBMin = vec3(-int(specs.size / 2));
+  const vec3 AABBMax = vec3(int(specs.size / 2) - 1);
   const vec3 dir = normalize(raw_dir);
 
   vec3 itsct, normal;
