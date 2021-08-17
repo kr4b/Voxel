@@ -4,8 +4,8 @@ use specs::{Component, DenseVecStorage};
 
 const MIN_DIST: f32 = 2.5;
 const MAX_DIST: f32 = 15.0;
-const BRANCH_COLOR: u16 = 0b1_01010_00111_00011;
-const LEAF_COLOR: u16 = 0b1_01001_10100_00101;
+const BRANCH_COLOR: u32 = 0b1_01010_00111_00011;
+const LEAF_COLOR: u32 = 0b1_01001_10100_00101;
 const LEAF_SIZE: usize = 5;
 
 struct Branch {
@@ -59,7 +59,7 @@ impl Tree {
         radius: f32,
         leaves: usize,
         start: Point3<f32>,
-        data: &mut Vec<u16>,
+        data: &mut Vec<u32>,
         size: usize,
     ) -> Self {
         let mut leaves = Vec::with_capacity(leaves);
@@ -104,7 +104,7 @@ impl Tree {
         }
     }
 
-    fn create_branch(pos: Point3<f32>, data: &mut Vec<u16>, size: usize) {
+    fn create_branch(pos: Point3<f32>, data: &mut Vec<u32>, size: usize) {
         data[pos.z.round() as usize * size * size
             + pos.y.round() as usize * size
             + pos.x.round() as usize] = BRANCH_COLOR;
@@ -114,7 +114,7 @@ impl Tree {
         pos: Point3<f32>,
         dir: Vector3<f32>,
         thickness: usize,
-        data: &mut Vec<u16>,
+        data: &mut Vec<u32>,
         size: usize,
     ) {
         for i in 0..thickness + 1 - (thickness & 1) {
@@ -150,7 +150,7 @@ impl Tree {
         }
     }
 
-    fn check_weight(data: &mut Vec<u16>, size: usize, x: usize, y: usize, z: usize) -> usize {
+    fn check_weight(data: &mut Vec<u32>, size: usize, x: usize, y: usize, z: usize) -> usize {
         let mut weight = 0;
 
         for i in -1..=1 {
@@ -182,7 +182,7 @@ impl Tree {
         weight
     }
 
-    pub fn create_leaves(&mut self, data: &mut Vec<u16>, size: usize) {
+    pub fn create_leaves(&mut self, data: &mut Vec<u32>, size: usize) {
         for branch in &self.branches {
             let x = branch.pos.x.round() as usize;
             let y = branch.pos.y.round() as usize;
@@ -215,7 +215,7 @@ impl Tree {
         }
     }
 
-    pub fn grow(&mut self, data: &mut Vec<u16>, size: usize) {
+    pub fn grow(&mut self, data: &mut Vec<u32>, size: usize) {
         if self.done {
             return;
         }

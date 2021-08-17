@@ -13,15 +13,12 @@ layout(binding = 2) uniform Specs {
   uint size;
 } specs;
 
-bool is_empty(uint n) {
-  return (n & (1 << 15)) == 0;
+bool is_empty(uvec4 c) {
+  return (c.a & (3 << 6)) == 0;
 }
 
-vec3 get_color(uint n) {
-  uint r = n & (31 << 10);
-  uint g = n & (31 << 5);
-  uint b = n & 31;
-  return vec3(float(r) / float(31 << 10), float(g) / float(31 << 5), float(b) / 31.0);
+vec3 get_color(uvec4 c) {
+  return vec3(c.r / 255.0, c.g / 255.0, c.b / 255.0);
 }
 
 vec2 intersect_ray_aabb(in vec3 origin, in vec3 dir, in vec3 AABBMin, in vec3 AABBMax) {
@@ -37,7 +34,7 @@ vec2 intersect_ray_aabb(in vec3 origin, in vec3 dir, in vec3 AABBMin, in vec3 AA
   return vec2(near, far);
 }
 
-uint intersect_ray(in vec3 origin, in vec3 dir, in vec3 AABBMin, in vec3 AABBMax, out vec3 itsct, out vec3 out_normal) {
+uvec4 intersect_ray(in vec3 origin, in vec3 dir, in vec3 AABBMin, in vec3 AABBMax, out vec3 itsct, out vec3 out_normal) {
   vec2 ts = intersect_ray_aabb(origin, dir, AABBMin - 1, AABBMax + 1);
 
   if (ts.x <= ts.y && ts.y >= 0.0) {
@@ -53,11 +50,11 @@ uint intersect_ray(in vec3 origin, in vec3 dir, in vec3 AABBMin, in vec3 AABBMax
 
     vec3 current = (boundary - origin) / (dir + vec3(equal(dir, vec3(0.0))) * EPSILON);
     vec3 normal = vec3(0.0);
-    uint voxel = 0;
+    uvec4 voxel = uvec4(0);
     uint i = 0;
 
     do {
-      voxel = texelFetch(volume, pos - ivec3(AABBMin), 0).r;
+      voxel = texelFetch(volume, pos - ivec3(AABBMin), 0);
       itsct = vec3(pos);
       out_normal = normal;
 
@@ -81,7 +78,7 @@ uint intersect_ray(in vec3 origin, in vec3 dir, in vec3 AABBMin, in vec3 AABBMax
     return voxel;
   }
 
-  return 0;
+  return uvec4(0);
 }
 
 void main() {
@@ -90,11 +87,11 @@ void main() {
   const vec3 dir = normalize(raw_dir);
 
   vec3 itsct, normal;
-  uint voxel = intersect_ray(origin, dir, AABBMin, AABBMax, itsct, normal);
+  uvec4 voxel = intersect_ray(origin, dir, AABBMin, AABBMax, itsct, normal);
   vec3 new_origin = itsct + normal;
 
   if (!is_empty(voxel)) {
-    uint v = intersect_ray(new_origin, vec3(0.0, 1.0, 0.0), AABBMin, AABBMax, itsct, normal);
+    uvec4 v = intersect_ray(new_origin, vec3(0.0, 1.0, 0.0), AABBMin, AABBMax, itsct, normal);
     color = vec4(get_color(voxel) * (is_empty(v) ? 1.0 : 0.5), 1.0);
   } else {
     color = vec4(0.0);

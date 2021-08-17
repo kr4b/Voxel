@@ -156,8 +156,8 @@ impl VulkanBuilder {
             volume.size() as u32,
             volume.size() as u32,
             volume.size() as u32,
-            2,
-            vk::Format::R16_UINT,
+            4,
+            vk::Format::R8G8B8A8_UINT,
             &volume.data,
         );
 
@@ -185,8 +185,8 @@ impl VulkanBuilder {
             volume.size() as u32,
             volume.size() as u32,
             volume.size() as u32,
-            2,
-            vk::Format::R16_UINT,
+            4,
+            vk::Format::R8G8B8A8_UINT,
         );
 
         self.dynamic_textures.insert(
