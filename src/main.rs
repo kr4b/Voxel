@@ -30,8 +30,8 @@ struct App {
 
 impl App {
     pub fn new(window: Window) -> Self {
-        // let mut texture = Volume::from_file("assets/world", 512);
-        let mut texture = Volume::new(512);
+        let mut texture = Volume::from_file("assets/world", 512);
+        // let mut texture = Volume::new(512);
 
         let size = texture.size();
         let mut height = 0;
@@ -49,6 +49,21 @@ impl App {
             rand::random::<f32>() * 10.0 - 5.0,
         );
         let tree = Tree::new(start + offset, 30.0, 400, start, &mut texture.data, size);
+
+        let glass = 0b10000000_11111111_11111111_11111111;
+        let metal = 0b11111000_11111111_01010101_01010101;
+        for y in 0..15 {
+            for z in 0..15 {
+                texture.data[(size / 2 - 8 + z) * size * size
+                    + (height + 10 + y) * size
+                    + size / 2
+                    - 30] = glass;
+                texture.data[(size / 2 - 8 + z) * size * size
+                    + (height + 10 + y) * size
+                    + size / 2
+                    + 30] = metal;
+            }
+        }
 
         let inv_proj = Self::create_inv_proj(window.inner_size());
         let view = Matrix4::identity();

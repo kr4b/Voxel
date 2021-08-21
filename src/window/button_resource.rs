@@ -8,14 +8,14 @@ pub struct ButtonResource<T> where T: std::cmp::Eq + std::hash::Hash {
     modifiers: ModifiersState,
 }
 
-impl<T> ButtonResource<T> where T: std::cmp::Eq + std::hash::Hash {
+impl<T> ButtonResource<T> where T: std::cmp::Eq + std::hash::Hash + Copy {
     pub fn update_buttons(&mut self, button: T, state: ElementState) {
         match state {
             ElementState::Pressed if self.pressed.contains(&button) => {
                 self.pressed.remove(&button);
-                self.held.insert(button);
             },
             ElementState::Pressed => {
+                self.held.insert(button);
                 self.pressed.insert(button);
             },
             ElementState::Released => {

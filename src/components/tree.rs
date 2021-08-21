@@ -4,8 +4,8 @@ use specs::{Component, DenseVecStorage};
 
 const MIN_DIST: f32 = 2.5;
 const MAX_DIST: f32 = 15.0;
-const BRANCH_COLOR: u32 = 0b1_01010_00111_00011;
-const LEAF_COLOR: u32 = 0b1_01001_10100_00101;
+const BRANCH_COLOR: u32 = 0b11000000_00011001_00111010_01010011;
+const LEAF_COLOR: u32 = 0b11000000_00101001_10100101_01001010;
 const LEAF_SIZE: usize = 5;
 
 struct Branch {

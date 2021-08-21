@@ -73,13 +73,13 @@ impl Volume {
                         let factor = fbm.get([x as f64, y as f64, z as f64]);
                         if depth == 0 {
                             data[index] =
-                                (3 << 30) + Self::to_color(0b01000010, 0b01111100, 0b00111010, 1.0 - factor)
+                                (15 << 28) + Self::to_color(0b01000010, 0b01111100, 0b00111010, 1.0 - factor)
                         } else if depth < 5 {
                             data[index] =
-                                (3 << 30) + Self::to_color(0b01001010, 0b01000010, 0b00110010, 1.0 - factor * 0.5)
+                                (15 << 28) + Self::to_color(0b01001010, 0b01000010, 0b00110010, 1.0 - factor * 0.5)
                         } else {
                             data[index] =
-                                (3 << 30) + Self::to_color(0b01000010, 0b00111100, 0b00110010, 1.0 - factor * 0.1)
+                                (15 << 28) + Self::to_color(0b01000010, 0b00111100, 0b00110010, 1.0 - factor * 0.1)
                         }
 
                         depth += 1;
