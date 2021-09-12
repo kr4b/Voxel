@@ -14,6 +14,13 @@ layout(binding = 2) uniform Specs {
   uint size;
 } specs;
 
+struct Light {
+  vec3 pos;
+  vec4 color;
+  float min_radius;
+  float max_radius;
+};
+
 bool is_empty(uvec4 c) {
   return (c.a >> 4) == 0;
 }
@@ -110,6 +117,13 @@ void main() {
   vec3 dir = normalize(raw_dir);
   vec3 origin = in_origin;
 
+  const Light light = Light(
+    vec3(-25.0, -120.0, -5.0),
+    vec4(1.0, 0.0, 1.0, 0.4),
+    20.0,
+    50.0
+  );
+
   vec4 final_color = vec4(0.0);
   uvec4 skip_voxel = uvec4(0);
 
@@ -125,6 +139,13 @@ void main() {
     const float reflectivity = get_reflectivity(voxel);
 
     final_color += vec4(get_color(voxel) * shade * transparency, transparency) * (1.0 - final_color.a) * (1.0 - reflectivity); 
+
+    const vec3 dist = light.pos - itsct;
+    if (dot(dist, dist) <= light.max_radius * light.max_radius) {
+      const float len = length(dist);
+      const float intensity = 1.0 - (len - light.min_radius) / (light.max_radius - light.min_radius);
+      final_color = vec4(final_color.rgb + light.color.rgb * intensity * light.color.a, final_color.a);
+    }
 
     if (final_color.a >= 1.0 - EPSILON || (transparency >= 1.0 - EPSILON && reflectivity <= EPSILON) || is_empty(voxel)) {
       break;
