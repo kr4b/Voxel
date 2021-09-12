@@ -122,10 +122,16 @@ void main() {
     const uvec4 shade_voxel = intersect_ray(itsct, light_dir, aabb_min, aabb_max, uvec4(0), shade_itsct, shade_normal);
     const float shade = 1.0 - 0.5 * get_transparency(shade_voxel);
     const float transparency = get_transparency(voxel);
+    const float reflectivity = get_reflectivity(voxel);
 
-    final_color += vec4(get_color(voxel) * shade * transparency, transparency) * (1.0 - final_color.a); 
-    if (final_color.a >= 1.0 - EPSILON || transparency >= 1.0 - EPSILON || is_empty(voxel)) {
+    final_color += vec4(get_color(voxel) * shade * transparency, transparency) * (1.0 - final_color.a) * (1.0 - reflectivity); 
+
+    if (final_color.a >= 1.0 - EPSILON || (transparency >= 1.0 - EPSILON && reflectivity <= EPSILON) || is_empty(voxel)) {
       break;
+    }
+    
+    if (reflectivity > EPSILON) {
+      dir = dir - 2.0 * dot(dir, normal) * normal;
     }
 
     origin = itsct;

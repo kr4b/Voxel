@@ -51,7 +51,7 @@ impl App {
         let tree = Tree::new(start + offset, 30.0, 400, start, &mut texture.data, size);
 
         let glass = 0b10000000_11111111_11111111_11111111;
-        let metal = 0b11111000_11111111_01010101_01010101;
+        let metal = 0b11111000_01010101_01010101_11111111;
         for y in 0..15 {
             for z in 0..15 {
                 texture.data[(size / 2 - 8 + z) * size * size
