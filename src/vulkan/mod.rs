@@ -11,7 +11,6 @@ mod command_pool;
 pub mod constants;
 mod descriptor_pool;
 mod descriptor_set_layout;
-mod dynamic_texture;
 mod framebuffers;
 mod image_views;
 mod instance;

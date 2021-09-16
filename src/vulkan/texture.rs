@@ -404,6 +404,13 @@ impl DynamicTexture {
             vk::ImageLayout::UNDEFINED,
             vk::ImageLayout::TRANSFER_DST_OPTIMAL,
         );
+        transition_image_layout(
+            logical_device,
+            command_buffer,
+            value,
+            vk::ImageLayout::TRANSFER_DST_OPTIMAL,
+            vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL,
+        );
         command_pool.end_single_time_commands(logical_device, command_buffer, queues.graphics);
 
         Self {

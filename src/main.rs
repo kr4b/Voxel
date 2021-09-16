@@ -32,8 +32,8 @@ struct App {
 
 impl App {
     pub fn new(window: Window) -> Self {
-        let mut texture = Volume::from_file("assets/world", 512);
-        // let mut texture = Volume::new(64);
+        // let mut texture = Volume::from_file("assets/world", 512);
+        let mut texture = Volume::new(64);
 
         let size = texture.size();
         let mut height = 0;
