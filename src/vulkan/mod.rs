@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 use std::ptr;
-use std::sync::Arc;
 
 use ash::version::{DeviceV1_0, EntryV1_0, InstanceV1_0};
 use ash::vk;
 
 use winit::window::Window;
 
+mod buffer;
 mod command_pool;
 pub mod constants;
 mod descriptor_pool;
@@ -28,10 +28,10 @@ mod swap_chain;
 mod swap_chain_support;
 mod sync_objects;
 pub mod texture;
-mod uniform_buffers;
-mod uniform_layout;
+mod buffer_layout;
 mod util;
 
+use buffer::Buffer;
 use command_pool::CommandPool;
 use descriptor_pool::DescriptorPool;
 use descriptor_set_layout::DescriptorSetLayout;
@@ -48,8 +48,7 @@ use surface::Surface;
 use swap_chain::SwapChain;
 use sync_objects::SyncObjects;
 use texture::{DynamicTexture, StaticTexture};
-use uniform_buffers::UniformBuffers;
-use uniform_layout::{UniformLayout, UniformLayouts};
+use buffer_layout::{BufferLayout, BufferLayouts};
 
 use crate::volume::Volume;
 
@@ -67,9 +66,9 @@ pub struct VulkanBuilder {
     framebuffers: Framebuffers,
     command_pool: CommandPool,
     memory_properties: vk::PhysicalDeviceMemoryProperties,
-    uniforms: UniformLayouts<UniformBuffers>,
-    textures: UniformLayouts<StaticTexture>,
-    dynamic_textures: UniformLayouts<DynamicTexture>,
+    uniforms: BufferLayouts<Buffer>,
+    textures: BufferLayouts<StaticTexture>,
+    dynamic_textures: BufferLayouts<DynamicTexture>,
 }
 
 impl VulkanBuilder {
@@ -124,22 +123,51 @@ impl VulkanBuilder {
         }
     }
 
-    pub fn with_uniform<T>(mut self, binding: u32, stage_flags: vk::ShaderStageFlags) -> Self {
-        let uniform_buffers = UniformBuffers::new(
+    fn with_buffer<T>(
+        mut self,
+        binding: u32,
+        stage_flags: vk::ShaderStageFlags,
+        usage: vk::BufferUsageFlags,
+        descriptor_type: vk::DescriptorType,
+        multiplier: vk::DeviceSize,
+    ) -> Self {
+        let buffers = Buffer::new(
             self.memory_properties,
             &self.logical_device,
             self.swap_chain.images.len(),
-            std::mem::size_of::<T>() as vk::DeviceSize,
+            usage,
+            descriptor_type,
+            std::mem::size_of::<T>() as vk::DeviceSize * multiplier,
         );
 
         self.uniforms.insert(
             binding,
-            UniformLayout {
+            BufferLayout {
                 stage_flags,
-                uniforms: uniform_buffers,
+                buffer: buffers,
             },
         );
         self
+    }
+
+    pub fn with_uniform<T>(self, binding: u32, stage_flags: vk::ShaderStageFlags) -> Self {
+        self.with_buffer::<T>(
+            binding,
+            stage_flags,
+            vk::BufferUsageFlags::UNIFORM_BUFFER,
+            vk::DescriptorType::UNIFORM_BUFFER,
+            1,
+        )
+    }
+
+    pub fn with_storage<T>(self, binding: u32, stage_flags: vk::ShaderStageFlags, multiplier: vk::DeviceSize) -> Self {
+        self.with_buffer::<T>(
+            binding,
+            stage_flags,
+            vk::BufferUsageFlags::STORAGE_BUFFER,
+            vk::DescriptorType::STORAGE_BUFFER,
+            multiplier,
+        )
     }
 
     pub fn with_texture(
@@ -163,9 +191,9 @@ impl VulkanBuilder {
 
         self.textures.insert(
             binding,
-            UniformLayout {
+            BufferLayout {
                 stage_flags,
-                uniforms: texture,
+                buffer: texture,
             },
         );
         self
@@ -191,9 +219,9 @@ impl VulkanBuilder {
 
         self.dynamic_textures.insert(
             binding,
-            UniformLayout {
+            BufferLayout {
                 stage_flags,
-                uniforms: texture,
+                buffer: texture,
             },
         );
         self
@@ -310,9 +338,9 @@ pub struct Vulkan {
     images_in_flight: Vec<vk::Fence>,
     framebuffer_resized: bool,
     memory_properties: vk::PhysicalDeviceMemoryProperties,
-    uniforms: UniformLayouts<UniformBuffers>,
-    textures: UniformLayouts<StaticTexture>,
-    dynamic_textures: UniformLayouts<DynamicTexture>,
+    uniforms: BufferLayouts<Buffer>,
+    textures: BufferLayouts<StaticTexture>,
+    dynamic_textures: BufferLayouts<DynamicTexture>,
     sampler: Sampler,
     image_index: usize,
 }
@@ -434,12 +462,12 @@ impl Vulkan {
         self.sync_objects.increment();
     }
 
-    pub fn update_uniform<T>(&mut self, binding: u32, value: T) {
+    pub fn update_buffer<T>(&mut self, binding: u32, value: T) {
         let data = unsafe {
             self.logical_device.value.map_memory(
-                self.uniforms[&binding].uniforms.memory(self.image_index),
+                self.uniforms[&binding].buffer.memory(self.image_index),
                 0,
-                self.uniforms[&binding].uniforms.size,
+                self.uniforms[&binding].buffer.size,
                 vk::MemoryMapFlags::empty(),
             )
         }
@@ -451,12 +479,12 @@ impl Vulkan {
             data.copy_from_nonoverlapping(buffers.as_ptr(), buffers.len());
             self.logical_device
                 .value
-                .unmap_memory(self.uniforms[&binding].uniforms.memory(self.image_index));
+                .unmap_memory(self.uniforms[&binding].buffer.memory(self.image_index));
         }
     }
 
     pub fn update_texture<T>(&self, binding: u32, data: &Vec<T>) {
-        self.dynamic_textures[&binding].uniforms.update(
+        self.dynamic_textures[&binding].buffer.update(
             &self.logical_device,
             &self.command_pool,
             &self.queues,
@@ -476,7 +504,7 @@ impl Vulkan {
         self.image_views.destroy(&self.logical_device);
         self.swap_chain.destroy();
         for uniform in self.uniforms.values_mut() {
-            uniform.uniforms.destroy(&self.logical_device);
+            uniform.buffer.destroy(&self.logical_device);
         }
         self.descriptor_pool.destroy(&self.logical_device);
     }
@@ -509,11 +537,13 @@ impl Vulkan {
             &self.render_pass,
         );
         for uniform in self.uniforms.values_mut() {
-            uniform.uniforms = UniformBuffers::new(
+            uniform.buffer = Buffer::new(
                 self.memory_properties,
                 &self.logical_device,
                 self.swap_chain.images.len(),
-                uniform.uniforms.size,
+                uniform.buffer.usage,
+                uniform.buffer.descriptor_type,
+                uniform.buffer.size,
             );
         }
         self.descriptor_pool = DescriptorPool::new(
@@ -544,10 +574,10 @@ impl Drop for Vulkan {
         self.sync_objects.destroy(&self.logical_device);
         self.sampler.destroy(&self.logical_device);
         for texture in self.textures.values_mut() {
-            texture.uniforms.destroy(&self.logical_device);
+            texture.buffer.destroy(&self.logical_device);
         }
         for texture in self.dynamic_textures.values_mut() {
-            texture.uniforms.destroy(&self.logical_device);
+            texture.buffer.destroy(&self.logical_device);
         }
         self.command_pool.destroy(&self.logical_device);
         self.descriptor_set_layout.destroy(&self.logical_device);

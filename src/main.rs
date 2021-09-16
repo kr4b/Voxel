@@ -2,7 +2,7 @@ use specs::{Builder, WorldExt};
 
 use ash::vk;
 
-use nalgebra::{Matrix4, Point3, Vector3};
+use nalgebra::{Matrix4, Point3, Vector3, Vector4};
 
 use winit::dpi::PhysicalSize;
 use winit::event::{DeviceEvent, ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent};
@@ -12,6 +12,7 @@ use winit::window::Window;
 mod components;
 mod dispatcher;
 mod math;
+mod misc;
 mod systems;
 mod volume;
 mod vulkan;
@@ -20,6 +21,7 @@ mod window;
 use components::tree::Tree;
 use dispatcher::Dispatcher;
 use math::matrices::Matrices;
+use misc::light::Light;
 use volume::*;
 use vulkan::Vulkan;
 use window::{keyboard::Keyboard, mouse::Mouse};
@@ -31,7 +33,7 @@ struct App {
 impl App {
     pub fn new(window: Window) -> Self {
         let mut texture = Volume::from_file("assets/world", 512);
-        // let mut texture = Volume::new(512);
+        // let mut texture = Volume::new(64);
 
         let size = texture.size();
         let mut height = 0;
@@ -54,14 +56,12 @@ impl App {
         let metal = 0b11111000_01010101_01010101_11111111;
         for y in 0..15 {
             for z in 0..15 {
-                texture.data[(size / 2 - 8 + z) * size * size
-                    + (height + 10 + y) * size
-                    + size / 2
-                    - 30] = glass;
-                texture.data[(size / 2 - 8 + z) * size * size
-                    + (height + 10 + y) * size
-                    + size / 2
-                    + 30] = metal;
+                texture.data
+                    [(size / 2 - 8 + z) * size * size + (height + 10 + y) * size + size / 2 - 30] =
+                    glass;
+                texture.data
+                    [(size / 2 - 8 + z) * size * size + (height + 10 + y) * size + size / 2 + 30] =
+                    metal;
             }
         }
 
@@ -74,6 +74,7 @@ impl App {
             // .with_texture(1, vk::ShaderStageFlags::FRAGMENT, &texture)
             .with_dynamic_texture(1, vk::ShaderStageFlags::FRAGMENT, &texture)
             .with_uniform::<u32>(2, vk::ShaderStageFlags::FRAGMENT)
+            .with_storage::<Light>(3, vk::ShaderStageFlags::FRAGMENT, 1)
             .build();
 
         vulkan.update_texture(1, &texture.data);
@@ -149,6 +150,14 @@ impl App {
                 self.dispatcher.update();
                 let mut mouse = self.dispatcher.world().write_resource::<Mouse>();
                 mouse.update_delta((0.0, 0.0));
+                let mut vulkan = self.dispatcher.world().write_resource::<Vulkan>();
+                let light = Light::new(
+                    Vector3::new(-25.0, -120.0, -5.0),
+                    Vector4::new(1.0, 0.0, 1.0, 0.4),
+                    20.0,
+                    50.0,
+                );
+                vulkan.update_buffer(3, light);
             }
             _ => (),
         });

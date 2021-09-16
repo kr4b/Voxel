@@ -4,7 +4,7 @@ use ash::version::DeviceV1_0;
 use ash::vk;
 
 use super::{
-    DynamicTexture, LogicalDevice, StaticTexture, UniformBuffers, UniformLayout, UniformLayouts,
+    Buffer, DynamicTexture, LogicalDevice, StaticTexture, BufferLayout, BufferLayouts,
 };
 
 pub struct DescriptorSetLayout {
@@ -14,22 +14,22 @@ pub struct DescriptorSetLayout {
 impl DescriptorSetLayout {
     pub fn new(
         logical_device: &LogicalDevice,
-        uniforms: &UniformLayouts<UniformBuffers>,
-        textures: &UniformLayouts<StaticTexture>,
-        dynamic_textures: &UniformLayouts<DynamicTexture>,
+        buffers: &BufferLayouts<Buffer>,
+        textures: &BufferLayouts<StaticTexture>,
+        dynamic_textures: &BufferLayouts<DynamicTexture>,
     ) -> Self {
         let mut bindings = Vec::new();
-        for (binding, UniformLayout { stage_flags, .. }) in uniforms {
+        for (binding, BufferLayout { stage_flags, buffer }) in buffers {
             bindings.push(vk::DescriptorSetLayoutBinding {
                 binding: *binding,
-                descriptor_type: vk::DescriptorType::UNIFORM_BUFFER,
+                descriptor_type: buffer.descriptor_type,
                 descriptor_count: 1,
                 stage_flags: *stage_flags,
                 p_immutable_samplers: ptr::null(),
             });
         }
 
-        for (binding, UniformLayout { stage_flags, .. }) in textures {
+        for (binding, BufferLayout { stage_flags, .. }) in textures {
             bindings.push(vk::DescriptorSetLayoutBinding {
                 binding: *binding,
                 descriptor_type: vk::DescriptorType::COMBINED_IMAGE_SAMPLER,
@@ -39,7 +39,7 @@ impl DescriptorSetLayout {
             });
         }
 
-        for (binding, UniformLayout { stage_flags, .. }) in dynamic_textures {
+        for (binding, BufferLayout { stage_flags, .. }) in dynamic_textures {
             bindings.push(vk::DescriptorSetLayoutBinding {
                 binding: *binding,
                 descriptor_type: vk::DescriptorType::COMBINED_IMAGE_SAMPLER,

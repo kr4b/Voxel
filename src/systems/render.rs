@@ -16,8 +16,8 @@ impl<'a> System<'a> for RenderSystem {
     fn run(&mut self, (mut vulkan, matrices, texture): Self::SystemData) {
         let matrices = matrices.clone();
         vulkan.begin_draw();
-        vulkan.update_uniform(0, matrices);
-        vulkan.update_uniform(2, texture.size() as u32);
+        vulkan.update_buffer(0, matrices);
+        vulkan.update_buffer(2, texture.size() as u32);
         vulkan.end_draw();
     }
 }

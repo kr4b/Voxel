@@ -90,10 +90,10 @@ impl Volume {
             }
         }
 
-        let mut file = std::fs::File::create("assets/world").unwrap();
-        let slice =
-            unsafe { std::slice::from_raw_parts(data.as_ptr() as *const u8, data.len() * 4) };
-        file.write_all(slice).unwrap();
+        // let mut file = std::fs::File::create("assets/world").unwrap();
+        // let slice =
+        //     unsafe { std::slice::from_raw_parts(data.as_ptr() as *const u8, data.len() * 4) };
+        // file.write_all(slice).unwrap();
 
         data
     }

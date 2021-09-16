@@ -161,6 +161,15 @@ impl Pipeline {
         }
         .expect("Failed to create pipeline layout");
 
+        let dynamic_states = [vk::DynamicState::VIEWPORT];
+        let dynamic_state_create_info = vk::PipelineDynamicStateCreateInfo {
+            s_type: vk::StructureType::PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+            p_next: ptr::null(),
+            flags: vk::PipelineDynamicStateCreateFlags::empty(),
+            dynamic_state_count: 1,
+            p_dynamic_states: dynamic_states.as_ptr(),
+        };
+
         let pipeline_create_info = vk::GraphicsPipelineCreateInfo {
             s_type: vk::StructureType::GRAPHICS_PIPELINE_CREATE_INFO,
             p_next: ptr::null(),
@@ -175,7 +184,7 @@ impl Pipeline {
             p_multisample_state: &multisample_create_info,
             p_depth_stencil_state: ptr::null(),
             p_color_blend_state: &color_blend_create_info,
-            p_dynamic_state: ptr::null(),
+            p_dynamic_state: &dynamic_state_create_info,
             layout,
             render_pass: render_pass.value,
             subpass: 0,

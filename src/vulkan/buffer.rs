@@ -4,19 +4,23 @@ use ash::vk;
 use super::util::create_buffer;
 use super::LogicalDevice;
 
-pub struct UniformBuffers {
+pub struct Buffer {
     values: Vec<vk::Buffer>,
     memory: Vec<vk::DeviceMemory>,
+    pub descriptor_type: vk::DescriptorType,
+    pub usage: vk::BufferUsageFlags,
     pub size: vk::DeviceSize,
 }
 
-impl UniformBuffers {
+impl Buffer {
     pub fn new(
         memory_properties: vk::PhysicalDeviceMemoryProperties,
         logical_device: &LogicalDevice,
         swap_chain_images_len: usize,
+        usage: vk::BufferUsageFlags,
+        descriptor_type: vk::DescriptorType,
         size: vk::DeviceSize,
-    ) -> UniformBuffers {
+    ) -> Self {
         let mut values = Vec::with_capacity(swap_chain_images_len);
         let mut memory = Vec::with_capacity(swap_chain_images_len);
 
@@ -25,16 +29,18 @@ impl UniformBuffers {
                 memory_properties,
                 logical_device,
                 size,
-                vk::BufferUsageFlags::UNIFORM_BUFFER,
+                usage,
                 vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT,
             );
             values.push(buffer);
             memory.push(buffer_memory);
         }
 
-        UniformBuffers {
+        Self {
             values,
             memory,
+            descriptor_type,
+            usage,
             size,
         }
     }

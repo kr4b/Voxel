@@ -21,6 +21,10 @@ struct Light {
   float max_radius;
 };
 
+layout(std140, binding = 3) readonly buffer LightBuffer {
+  Light lights[];
+};
+
 bool is_empty(uvec4 c) {
   return (c.a >> 4) == 0;
 }
@@ -117,13 +121,6 @@ void main() {
   vec3 dir = normalize(raw_dir);
   vec3 origin = in_origin;
 
-  const Light light = Light(
-    vec3(-25.0, -120.0, -5.0),
-    vec4(1.0, 0.0, 1.0, 0.4),
-    20.0,
-    50.0
-  );
-
   vec4 final_color = vec4(0.0);
   uvec4 skip_voxel = uvec4(0);
 
@@ -140,11 +137,11 @@ void main() {
 
     final_color += vec4(get_color(voxel) * shade * transparency, transparency) * (1.0 - final_color.a) * (1.0 - reflectivity); 
 
-    const vec3 dist = light.pos - itsct;
-    if (dot(dist, dist) <= light.max_radius * light.max_radius) {
+    const vec3 dist = lights[0].pos - itsct;
+    if (dot(dist, dist) <= lights[0].max_radius * lights[0].max_radius) {
       const float len = length(dist);
-      const float intensity = 1.0 - (len - light.min_radius) / (light.max_radius - light.min_radius);
-      final_color = vec4(final_color.rgb + light.color.rgb * intensity * light.color.a, final_color.a);
+      const float intensity = 1.0 - (len - lights[0].min_radius) / (lights[0].max_radius - lights[0].min_radius);
+      final_color = vec4(final_color.rgb + lights[0].color.rgb * intensity * lights[0].color.a, final_color.a);
     }
 
     if (final_color.a >= 1.0 - EPSILON || (transparency >= 1.0 - EPSILON && reflectivity <= EPSILON) || is_empty(voxel)) {

@@ -4,8 +4,8 @@ use ash::version::DeviceV1_0;
 use ash::vk;
 
 use super::{
-    DescriptorSetLayout, DynamicTexture, LogicalDevice, Sampler, StaticTexture, UniformBuffers,
-    UniformLayout, UniformLayouts,
+    Buffer, DescriptorSetLayout, DynamicTexture, LogicalDevice, Sampler, StaticTexture,
+    BufferLayout, BufferLayouts,
 };
 
 pub struct DescriptorPool {
@@ -18,15 +18,15 @@ impl DescriptorPool {
         logical_device: &LogicalDevice,
         swap_chain_images_len: usize,
         descriptor_set_layout: &DescriptorSetLayout,
-        uniforms: &UniformLayouts<UniformBuffers>,
-        textures: &UniformLayouts<StaticTexture>,
-        dynamic_textures: &UniformLayouts<DynamicTexture>,
+        buffers: &BufferLayouts<Buffer>,
+        textures: &BufferLayouts<StaticTexture>,
+        dynamic_textures: &BufferLayouts<DynamicTexture>,
         sampler: &Sampler,
     ) -> Self {
         let mut sizes = Vec::new();
-        for _ in 0..uniforms.len() {
+        for (_, BufferLayout { buffer, .. }) in buffers {
             sizes.push(vk::DescriptorPoolSize {
-                ty: vk::DescriptorType::UNIFORM_BUFFER,
+                ty: buffer.descriptor_type,
                 descriptor_count: swap_chain_images_len as u32,
             });
         }
@@ -81,11 +81,11 @@ impl DescriptorPool {
         for i in 0..swap_chain_images_len {
             let mut descriptor_sets = Vec::new();
             let mut buffer_infos = Vec::new();
-            for (binding, UniformLayout { uniforms, .. }) in uniforms {
+            for (binding, BufferLayout { buffer, .. }) in buffers {
                 buffer_infos.push(vk::DescriptorBufferInfo {
-                    buffer: uniforms.buffer(i),
+                    buffer: buffer.buffer(i),
                     offset: 0,
-                    range: uniforms.size,
+                    range: buffer.size,
                 });
 
                 let buffer_set_write = vk::WriteDescriptorSet {
@@ -95,7 +95,7 @@ impl DescriptorPool {
                     dst_binding: *binding,
                     dst_array_element: 0,
                     descriptor_count: 1,
-                    descriptor_type: vk::DescriptorType::UNIFORM_BUFFER,
+                    descriptor_type: buffer.descriptor_type,
                     p_image_info: ptr::null(),
                     p_buffer_info: buffer_infos.last().unwrap(),
                     p_texel_buffer_view: ptr::null(),
@@ -104,10 +104,10 @@ impl DescriptorPool {
             }
 
             let mut texture_infos = Vec::new();
-            for (binding, UniformLayout { uniforms, .. }) in textures {
+            for (binding, BufferLayout { buffer, .. }) in textures {
                 texture_infos.push(vk::DescriptorImageInfo {
                     image_layout: vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL,
-                    image_view: uniforms.image_view,
+                    image_view: buffer.image_view,
                     sampler: sampler.value,
                 });
 
@@ -127,10 +127,10 @@ impl DescriptorPool {
             }
 
             let mut dynamic_texture_infos = Vec::new();
-            for (binding, UniformLayout { uniforms, .. }) in dynamic_textures {
+            for (binding, BufferLayout { buffer, .. }) in dynamic_textures {
                 dynamic_texture_infos.push(vk::DescriptorImageInfo {
                     image_layout: vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL,
-                    image_view: uniforms.image_view,
+                    image_view: buffer.image_view,
                     sampler: sampler.value,
                 });
 
