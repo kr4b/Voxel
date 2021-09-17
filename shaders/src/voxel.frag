@@ -70,22 +70,20 @@ uvec4 intersect_ray(in vec3 origin, in vec3 dir, in vec3 aabb_min, in vec3 aabb_
 
     vec3 current = (boundary - origin) / (dir + vec3(equal(dir, vec3(0.0))) * EPSILON);
     vec3 normal = vec3(0.0);
-    uvec4 voxel = uvec4(0);
+    uvec4 voxel = texelFetch(volume, pos - ivec3(aabb_min), 0);
     uint i = 0;
     bool skip = !is_empty(skip_voxel);
     bool first_skip = false;
 
-    do {
-      voxel = texelFetch(volume, pos - ivec3(aabb_min), 0);
-      out_normal = normal;
-      if (normal.x != 0.0) {
-        itsct = start_pos + ((pos.x - start_pos.x - istep.x) / dir.x) * dir;
-      } else if (normal.y != 0.0) {
-        itsct = start_pos + ((pos.y - start_pos.y - istep.y) / dir.y) * dir;
-      } else {
-        itsct = start_pos + ((pos.z - start_pos.z - istep.z) / dir.z) * dir;
-      }
-
+    while (
+      (skip && voxel == skip_voxel) ||
+      (
+        all(greaterThanEqual(pos, aabb_min - 1)) &&
+        all(lessThanEqual(pos, aabb_max + 1)) &&
+        is_empty(voxel) &&
+        i < specs.size * 3
+      )
+    ) {
       if (current.x < current.y && current.x < current.z) {
         current.x += delta.x;
         pos.x += istep.x;
@@ -106,8 +104,18 @@ uvec4 intersect_ray(in vec3 origin, in vec3 dir, in vec3 aabb_min, in vec3 aabb_
         skip = false;
       }
 
+      voxel = texelFetch(volume, pos - ivec3(aabb_min), 0);
       i += 1;
-    } while ((skip && voxel == skip_voxel) || (all(greaterThanEqual(pos, aabb_min - 1)) && all(lessThanEqual(pos, aabb_max + 1)) && is_empty(voxel) && i < specs.size * 3));
+    }
+
+    out_normal = normal;
+    if (normal.x != 0.0) {
+      itsct = start_pos + ((pos.x - start_pos.x - istep.x) / dir.x) * dir;
+    } else if (normal.y != 0.0) {
+      itsct = start_pos + ((pos.y - start_pos.y - istep.y) / dir.y) * dir;
+    } else {
+      itsct = start_pos + ((pos.z - start_pos.z - istep.z) / dir.z) * dir;
+    }
 
     return voxel;
   }
