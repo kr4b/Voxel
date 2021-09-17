@@ -54,13 +54,19 @@ vec2 intersect_ray_aabb(in vec3 origin, in vec3 dir, in vec3 aabb_min, in vec3 a
   return vec2(near, far);
 }
 
-uvec4 intersect_ray(in vec3 origin, in vec3 dir, in vec3 aabb_min, in vec3 aabb_max, in uvec4 skip_voxel, out vec3 itsct, out vec3 out_normal) {
+uvec4 intersect_ray(
+    in vec3 origin,
+    in vec3 dir,
+    in vec3 aabb_min,
+    in vec3 aabb_max,
+    in uvec4 skip_voxel,
+    out vec3 itsct,
+    out vec3 out_normal
+  ) {
   vec2 ts = intersect_ray_aabb(origin, dir, aabb_min - 1, aabb_max + 1);
 
   if (ts.x <= ts.y && ts.y >= 0.0) {
-    if (ts.x < 0.0) {
-      ts.x = 0.0;
-    }
+    ts.x = max(ts.x, 0.0);
 
     const vec3 start_pos = origin + ts.x * dir;
     ivec3 pos = ivec3(floor(start_pos + EPSILON));
@@ -123,6 +129,47 @@ uvec4 intersect_ray(in vec3 origin, in vec3 dir, in vec3 aabb_min, in vec3 aabb_
   return uvec4(0);
 }
 
+uvec4 intersect_ray_dest(
+    in vec3 origin,
+    in vec3 dir,
+    in vec3 aabb_min,
+    in vec3 aabb_max,
+    in vec3 dest
+  ) {
+  ivec3 pos = ivec3(floor(origin + EPSILON));
+  const ivec3 istep = ivec3(sign(dir));
+  const vec3 delta = 1.0 / abs(dir);
+  const vec3 boundary = vec3(pos + max(istep, 0.0));
+
+  vec3 current = (boundary - origin) / (dir + vec3(equal(dir, vec3(0.0))) * EPSILON);
+  uvec4 voxel = texelFetch(volume, pos - ivec3(aabb_min), 0);
+  uint i = 0;
+
+  while (
+    all(greaterThanEqual(pos, aabb_min - 1)) &&
+    all(lessThanEqual(pos, aabb_max + 1)) &&
+    is_empty(voxel) &&
+    all(lessThanEqual(pos * sign(dir), dest * sign(dir))) &&
+    i < specs.size * 3
+  ) {
+    if (current.x < current.y && current.x < current.z) {
+      current.x += delta.x;
+      pos.x += istep.x;
+    } else if (current.y < current.z) {
+      current.y += delta.y;
+      pos.y += istep.y;
+    } else {
+      current.z += delta.z;
+      pos.z += istep.z;
+    }
+    
+    voxel = texelFetch(volume, pos - ivec3(aabb_min), 0);
+    i += 1;
+  }
+
+  return voxel;
+}
+
 void main() {
   const vec3 aabb_min = vec3(-int(specs.size / 2));
   const vec3 aabb_max = vec3(int(specs.size / 2) - 1);
@@ -143,13 +190,26 @@ void main() {
     const float transparency = get_transparency(voxel);
     const float reflectivity = get_reflectivity(voxel);
 
-    final_color += vec4(get_color(voxel) * shade * transparency, transparency) * (1.0 - final_color.a) * (1.0 - reflectivity); 
+    final_color +=
+      vec4(
+        get_color(voxel) * shade * transparency, transparency
+      ) * (1.0 - final_color.a) * (1.0 - reflectivity); 
 
-    const vec3 dist = lights[0].pos - itsct;
-    if (dot(dist, dist) <= lights[0].max_radius * lights[0].max_radius) {
-      const float len = length(dist);
-      const float intensity = 1.0 - (len - lights[0].min_radius) / (lights[0].max_radius - lights[0].min_radius);
-      final_color = vec4(final_color.rgb + lights[0].color.rgb * intensity * lights[0].color.a, final_color.a);
+    for (int i = 0; i <= lights.length(); i++) {
+      const vec3 dist = lights[i].pos - itsct;
+      if (dot(dist, dist) <= lights[i].max_radius * lights[i].max_radius) {
+        const uvec4 light_voxel = intersect_ray_dest(itsct, dist, aabb_min, aabb_max, lights[i].pos);
+        const float light_transparency = get_transparency(light_voxel);
+        if (light_transparency < 1.0 - EPSILON) {
+          const float len = length(dist);
+          const float intensity = 1.0 - (len - lights[i].min_radius) / (lights[i].max_radius - lights[i].min_radius);
+          final_color =
+            vec4(final_color.rgb +
+              lights[i].color.rgb * intensity * lights[i].color.a * (1.0 - light_transparency),
+              final_color.a
+            );
+        }
+      }
     }
 
     if (final_color.a >= 1.0 - EPSILON || (transparency >= 1.0 - EPSILON && reflectivity <= EPSILON) || is_empty(voxel)) {
