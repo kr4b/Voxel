@@ -6,7 +6,7 @@ Vulkan Voxel Tracer
 Real-time voxel tracer using Vulkan, written from scratch in Rust.
 Makes use of [ash](https://crates.io/crates/ash) for Vulkan bindings, [winit](https://crates.io/crates/winit) for window creation, [specs](https://crates.io/crates/specs) for ECS and [nalgebra](https://crates.io/crates/nalgebra) for linear algebra.
 
-Currently all voxel data is stored in a giant pre-generated 3D texture (`assets/world`), but it will be updated to use an SVO.
+Currently all voxel data is stored in a giant 3D texture, but it will be updated to use an SVO.
 The structure of the voxel data is 32 bit integers, where the 24 least significant bits represent 8-bit RGB color.
 The remaining 8 bits store transparancy and reflectivity respectively.
 
